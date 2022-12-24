@@ -10,7 +10,7 @@ data class Character(
     val about:String,
     val totalAppearances: Int,
     val image: String,
-    val day: String,
-    val month: String,
+    val quote: String,
+    val quoteTime: String,
     val rating: Double
 )
