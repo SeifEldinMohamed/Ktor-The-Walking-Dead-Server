@@ -29,6 +29,7 @@ dependencies {
     implementation("io.ktor:ktor-server-call-logging-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
+    implementation("io.ktor:ktor-server-default-headers:$ktorVersion")
     // Koin for Ktor
     implementation("io.insert-koin:koin-ktor:$koinKtor")
     // SLF4J (Simple Logging Facade For Java) Logger
