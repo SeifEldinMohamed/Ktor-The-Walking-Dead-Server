@@ -222,7 +222,27 @@ class CharacterRepositoryImp : CharacterRepository {
         return mapOf(PREV_PAGE_KEY to prevPage, NEXT_PAGE_KEY to nextPage)
     }
 
-    override suspend fun searchCharacters(name: String): ApiResponse {
-        TODO("Not yet implemented")
+    override suspend fun searchCharacters(name: String?): ApiResponse {
+        return ApiResponse(
+            success = true,
+            message = "ok",
+            characters = findCharacters(name)
+        )
+    }
+
+    private fun findCharacters(query: String?): List<Character> {
+        val founded = mutableListOf<Character>()
+        return if (!query.isNullOrBlank()) {
+            characters.forEach { (_, characters) ->
+                characters.forEach { character ->
+                    if (character.name.lowercase().contains(query.lowercase())) {
+                        founded.add(character)
+                    }
+                }
+            }
+            founded
+        } else {
+            emptyList()
+        }
     }
 }

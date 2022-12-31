@@ -13,5 +13,5 @@ interface CharacterRepository {
     val page5: List<Character>
 
     suspend fun getAllCharacters(page: Int = 1): ApiResponse
-    suspend fun searchCharacters(name: String): ApiResponse
+    suspend fun searchCharacters(name: String?): ApiResponse
 }
