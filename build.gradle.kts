@@ -34,9 +34,10 @@ dependencies {
     implementation("io.insert-koin:koin-ktor:$koinKtor")
     // SLF4J (Simple Logging Facade For Java) Logger
     implementation("io.insert-koin:koin-logger-slf4j:$koinKtor")
+    // statusPages
+    implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
 
     testImplementation("io.ktor:ktor-server-tests-jvm:$ktorVersion")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
-
 
 }
