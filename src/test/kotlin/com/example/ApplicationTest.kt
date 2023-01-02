@@ -134,7 +134,6 @@ class ApplicationTest {
 
 //    @Test
 //    fun `access all characters endpoint with query all pages assert correct information`() = testApplication {
-//
 //        environment {
 //            developmentMode = false
 //        }
@@ -200,6 +199,70 @@ class ApplicationTest {
 //            nextPage = null
 //        return mapOf(PREV_PAGE_KEY to prevPage, NEXT_PAGE_KEY to nextPage)
 //    }
+
+    @Test
+    fun `access all characters endpoint with non existing page number, assert error`() = testApplication {
+
+        application {
+            configureRouting()
+        }
+        client.get("/characters?page=6").apply {
+            assertEquals(
+                expected = HttpStatusCode.NotFound,
+                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
+            )
+//            val expected = ApiResponse(
+//                success = false,
+//                message = "Characters not found.",
+//                )
+//
+//            val actual = Json.decodeFromString<ApiResponse>(bodyAsText())
+//           // print("Actual: ${bodyAsText()}")
+//
+//            assertEquals(
+//                expected = expected.success,
+//                actual = actual.success
+//            )
+//
+//            assertEquals(
+//                expected = expected.message,
+//                actual = actual.message
+//            )
+
+        }
+    }
+
+    @Test
+    fun `access all characters endpoint with invalid page number, assert error`() = testApplication {
+
+        application {
+            configureRouting()
+        }
+        client.get("/characters?page=invalid").apply {
+            assertEquals(
+                expected = HttpStatusCode.BadRequest,
+                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
+            )
+//            val expected = ApiResponse(
+//                success = false,
+//                message = "Characters not found.",
+//                )
+//
+//            val actual = Json.decodeFromString<ApiResponse>(bodyAsText())
+//           // print("Actual: ${bodyAsText()}")
+//
+//            assertEquals(
+//                expected = expected.success,
+//                actual = actual.success
+//            )
+//
+//            assertEquals(
+//                expected = expected.message,
+//                actual = actual.message
+//            )
+
+        }
+    }
 
 }
 // we use Json to deserialize the result from our server and to convert this json response back into this apiResponse object
