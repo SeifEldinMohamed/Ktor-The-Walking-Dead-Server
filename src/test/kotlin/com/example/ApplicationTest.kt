@@ -1,309 +1,175 @@
 package com.example
 
 import com.example.models.ApiResponse
-import io.ktor.http.*
+import com.example.repository.CharacterRepositoryImp
+import com.example.repository.NEXT_PAGE_KEY
+import com.example.repository.PREV_PAGE_KEY
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import kotlin.test.*
+import io.ktor.http.*
 import io.ktor.server.testing.*
-import com.example.repository.CharacterRepository
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import org.koin.java.KoinJavaComponent.inject
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class ApplicationTest {
 
-    private val characterRepository: CharacterRepository by inject(CharacterRepository::class.java)
-
     @Test
-    fun `access root endpoint, then assert correct information`() = testApplication {
-
-        client.get("/").apply {
+    fun `access root endpoint, assert correct information`() =
+        testApplication {
+            val response = client.get("/")
             assertEquals(
                 expected = HttpStatusCode.OK,
-                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
+                actual = response.status // // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
             )
             assertEquals(
                 expected = "Welcome to The Walking Dead API !",
-                actual = bodyAsText() // Read the HttpResponse.content as a String.
+                actual = response.bodyAsText()
             )
         }
-    }
 
+    @ExperimentalSerializationApi
     @Test
-    fun `access all characters endpoint, assert correct information`() = testApplication {
-        environment {
-            developmentMode = false
+    fun `access all heroes endpoint, query all pages, assert correct information`() =
+        testApplication {
+            val characterRepository = CharacterRepositoryImp()
+            val pages = 1..5
+            val heroes = listOf(
+                characterRepository.page1,
+                characterRepository.page2,
+                characterRepository.page3,
+                characterRepository.page4,
+                characterRepository.page5
+            )
+            pages.forEach { page ->
+                val response = client.get("/characters?page=$page")
+                assertEquals(
+                    expected = HttpStatusCode.OK,
+                    actual = response.status
+                )
+                val actual = Json.decodeFromString<ApiResponse>(response.bodyAsText())
+                val expected = ApiResponse(
+                    success = true,
+                    message = "ok",
+                    prevPage = calculatePage(page = page)["prevPage"],
+                    nextPage = calculatePage(page = page)["nextPage"],
+                    characters = heroes[page - 1],
+                )
+                assertEquals(
+                    expected = expected.message,
+                    actual = actual.message
+                )
+            }
         }
 
-        client.get("/characters").apply {
-            assertEquals(
-                expected = HttpStatusCode.OK,
-                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
-            )
-            val expected = ApiResponse(
-                success = true,
-                message = "ok",
-                prevPage = null,
-                nextPage = 2,
-                characters = characterRepository.page1
-            )
-            val actual = Json.decodeFromString<ApiResponse>(bodyAsText())
-            assertEquals(
-                expected = expected.success,
-                actual = actual.success
-            )
-            assertEquals(
-                expected = expected.characters,
-                actual = actual.characters
-            )
-            assertEquals(
-                expected = expected.message,
-                actual = actual.message
-            )
-            assertEquals(
-                expected = expected.prevPage,
-                actual = actual.prevPage
-            )
-            assertEquals(
-                expected = expected.nextPage,
-                actual = actual.nextPage
-            )
-        }
-    }
-
+    @ExperimentalSerializationApi
     @Test
-    fun `access all characters endpoint with second page query, assert correct information`() = testApplication {
-        environment {
-            developmentMode = false
-        }
-
-        client.get("/characters?page=2").apply {
-            assertEquals(
-                expected = HttpStatusCode.OK,
-                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
-            )
-            val expected = ApiResponse(
-                success = true,
-                message = "ok",
-                prevPage = 1,
-                nextPage = 3,
-                characters = characterRepository.page2
-            )
-            val actual = Json.decodeFromString<ApiResponse>(bodyAsText())
-            assertEquals(
-                expected = expected.success,
-                actual = actual.success
-            )
-            assertEquals(
-                expected = expected.characters,
-                actual = actual.characters
-            )
-            assertEquals(
-                expected = expected.message,
-                actual = actual.message
-            )
-            assertEquals(
-                expected = expected.prevPage,
-                actual = actual.prevPage
-            )
-            assertEquals(
-                expected = expected.nextPage,
-                actual = actual.nextPage
-            )
-        }
-    }
-
-//    @Test
-//    fun `access all characters endpoint with query all pages assert correct information`() = testApplication {
-//        environment {
-//            developmentMode = false
-//        }
-//        application {
-//            configureRouting()
-//        }
-//        val pages = 1..5
-//        val characters = listOf(
-//            characterRepository.page1,
-//            characterRepository.page2,
-//            characterRepository.page3,
-//            characterRepository.page4,
-//            characterRepository.page5,
-//        )
-//        pages.forEach{page ->
-//            client.get("/characters?page=$page").apply {
-//                assertEquals(
-//                    expected = HttpStatusCode.OK,
-//                    actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
-//                )
-//                val expected = ApiResponse(
-//                    success = true,
-//                    message = "ok",
-//                    prevPage = calculatePage(page)[PREV_PAGE_KEY],
-//                    nextPage = calculatePage(page)[NEXT_PAGE_KEY],
-//                    characters = characters[page-1]
-//                )
-//                val actual = Json.decodeFromString<ApiResponse>(bodyAsText())
-//                assertEquals(
-//                    expected = expected.success,
-//                    actual = actual.success
-//                )
-//                assertEquals(
-//                    expected = expected.characters,
-//                    actual = actual.characters
-//                )
-//                assertEquals(
-//                    expected = expected.message,
-//                    actual = actual.message
-//                )
-//                assertEquals(
-//                    expected = expected.prevPage,
-//                    actual = actual.prevPage
-//                )
-//                assertEquals(
-//                    expected = expected.nextPage,
-//                    actual = actual.nextPage
-//                )
-//            }
-//        }
-//
-//    }
-//    private fun calculatePage(page: Int): Map<String, Int?> {
-//        var prevPage: Int? = page
-//        var nextPage: Int? = page
-//        if (page in 1..4)
-//            nextPage = nextPage?.plus(1)
-//        if (page in 2..5)
-//            prevPage = prevPage?.minus(1)
-//        if (page == 1)
-//            prevPage = null
-//        if (page == 5)
-//            nextPage = null
-//        return mapOf(PREV_PAGE_KEY to prevPage, NEXT_PAGE_KEY to nextPage)
-//    }
-
-    @Test
-    fun `access all characters endpoint with non existing page number, assert error`() = testApplication {
-
-        client.get("/characters?page=6").apply {
+    fun `access all heroes endpoint, query non existing page number, assert error`() =
+        testApplication {
+            val response = client.get("/characters?page=6")
             assertEquals(
                 expected = HttpStatusCode.NotFound,
-                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
+                actual = response.status
             )
-//            val expected = ApiResponse(
-//                success = false,
-//                message = "Characters not found.",
-//                )
-//
-//            val actual = Json.decodeFromString<ApiResponse>(bodyAsText())
-//           // print("Actual: ${bodyAsText()}")
-//
-//            assertEquals(
-//                expected = expected.success,
-//                actual = actual.success
-//            )
-//
-//            assertEquals(
-//                expected = expected.message,
-//                actual = actual.message
-//            )
-
+            assertEquals(
+                expected = "Page Not Found!",
+                actual = response.bodyAsText()
+            )
         }
-    }
 
+    @ExperimentalSerializationApi
     @Test
-    fun `access all characters endpoint with invalid page number, assert error`() = testApplication {
-
-        client.get("/characters?page=invalid").apply {
+    fun `access all heroes endpoint, query invalid page number, assert error`() =
+        testApplication {
+            val response = client.get("/characters?page=invalid")
             assertEquals(
                 expected = HttpStatusCode.BadRequest,
-                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
+                actual = response.status
             )
-//            val expected = ApiResponse(
-//                success = false,
-//                message = "Characters not found.",
-//                )
-//
-//            val actual = Json.decodeFromString<ApiResponse>(bodyAsText())
-//           // print("Actual: ${bodyAsText()}")
-//
-//            assertEquals(
-//                expected = expected.success,
-//                actual = actual.success
-//            )
-//
-//            assertEquals(
-//                expected = expected.message,
-//                actual = actual.message
-//            )
-
-        }
-    }
-
-    @Test
-    fun `access search characters endpoint query hero name, assert single character result`() = testApplication {
-        client.get("/character/search?name=Michonne").apply {
+            val expected = ApiResponse(
+                success = false,
+                message = "Only Numbers Allowed."
+            )
+            val actual = Json.decodeFromString<ApiResponse>(response.bodyAsText())
             assertEquals(
-                expected = HttpStatusCode.OK,
-                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
+                expected = expected.message,
+                actual = actual.message
             )
+        }
 
-            val actual = Json.decodeFromString<ApiResponse>(bodyAsText()).characters.size
-
+    @ExperimentalSerializationApi
+    @Test
+    fun `access search heroes endpoint, query hero name, assert single hero result`() =
+        testApplication {
+            val response = client.get("/character/search?name=michonne")
+            assertEquals(expected = HttpStatusCode.OK, actual = response.status)
+            val actual = Json.decodeFromString<ApiResponse>(response.bodyAsText())
+                .characters.size
             assertEquals(expected = 1, actual = actual)
         }
-    }
 
+    @ExperimentalSerializationApi
     @Test
-    fun `access search characters endpoint query hero name, assert multiple character result`() = testApplication {
-        client.get("/character/search?name=grimes").apply {
-            assertEquals(
-                expected = HttpStatusCode.OK,
-                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
-            )
-
-            val actual = Json.decodeFromString<ApiResponse>(bodyAsText()).characters.size
-
+    fun `access search heroes endpoint, query hero name, assert multiple heroes result`() =
+        testApplication {
+            val response = client.get("/character/search?name=grimes")
+            assertEquals(expected = HttpStatusCode.OK, actual = response.status)
+            val actual = Json.decodeFromString<ApiResponse>(response.bodyAsText())
+                .characters.size
             assertEquals(expected = 2, actual = actual)
         }
-    }
 
+    @ExperimentalSerializationApi
     @Test
-    fun `access search characters endpoint query empty text, assert empty list as a result`() = testApplication {
-        client.get("/character/search?name=").apply {
-            assertEquals(
-                expected = HttpStatusCode.OK,
-                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
-            )
-
-            val actual = Json.decodeFromString<ApiResponse>(bodyAsText()).characters
-
+    fun `access search heroes endpoint, query an empty text, assert empty list as a result`() =
+        testApplication {
+            val response = client.get("/character/search?name=")
+            assertEquals(expected = HttpStatusCode.OK, actual = response.status)
+            val actual = Json.decodeFromString<ApiResponse>(response.bodyAsText())
+                .characters
             assertEquals(expected = emptyList(), actual = actual)
         }
-    }
+
+    @ExperimentalSerializationApi
     @Test
-    fun `access search characters endpoint query non existing character, assert empty list as a result`() = testApplication {
-        client.get("/character/search?name=seif").apply {
-            assertEquals(
-                expected = HttpStatusCode.OK,
-                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
-            )
-
-            val actual = Json.decodeFromString<ApiResponse>(bodyAsText()).characters
-
+    fun `access search heroes endpoint, query non existing hero, assert empty list as a result`() =
+        testApplication {
+            val response = client.get("/character/search?name=unknown")
+            assertEquals(expected = HttpStatusCode.OK, actual = response.status)
+            val actual = Json.decodeFromString<ApiResponse>(response.bodyAsText())
+                .characters
             assertEquals(expected = emptyList(), actual = actual)
         }
+
+    @ExperimentalSerializationApi
+    @Test
+    fun `access non existing endpoint,assert not found`() =
+        testApplication {
+            val response = client.get("/unknown")
+            assertEquals(expected = HttpStatusCode.NotFound, actual = response.status)
+            assertEquals(expected = "Page Not Found!", actual = response.bodyAsText())
+        }
+
+    private fun calculatePage(page: Int): Map<String, Int?> {
+        var prevPage: Int? = page
+        var nextPage: Int? = page
+        if (page in 1..4) {
+            nextPage = nextPage?.plus(1)
+        }
+        if (page in 2..5) {
+            prevPage = prevPage?.minus(1)
+        }
+        if (page == 1) {
+            prevPage = null
+        }
+        if (page == 5) {
+            nextPage = null
+        }
+        return mapOf(PREV_PAGE_KEY to prevPage, NEXT_PAGE_KEY to nextPage)
     }
 
-    @Test
-    fun `access non existing endpoint, assert not found`() = testApplication {
-        client.get("/unknown").apply {
-            assertEquals(
-                expected = HttpStatusCode.NotFound,
-                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
-            )
-            assertEquals(expected = "Page Not Found!", actual = bodyAsText())
-        }
-    }
 }
+
 // we use Json to deserialize the result from our server and to convert this json response back into this apiResponse object
