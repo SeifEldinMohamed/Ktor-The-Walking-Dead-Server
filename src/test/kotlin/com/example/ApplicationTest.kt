@@ -1,25 +1,15 @@
 package com.example
 
-import com.example.dii.koinModule
 import com.example.models.ApiResponse
 import io.ktor.http.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import kotlin.test.*
 import io.ktor.server.testing.*
-import com.example.plugins.*
 import com.example.repository.CharacterRepository
-import com.example.repository.CharacterRepositoryImp
-import com.example.repository.NEXT_PAGE_KEY
-import com.example.repository.PREV_PAGE_KEY
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import org.junit.After
-import org.junit.Assert
-import org.koin.core.context.GlobalContext.stopKoin
-import org.koin.core.context.startKoin
 import org.koin.java.KoinJavaComponent.inject
-import org.koin.ktor.plugin.Koin
 
 class ApplicationTest {
 
@@ -27,9 +17,7 @@ class ApplicationTest {
 
     @Test
     fun `access root endpoint, then assert correct information`() = testApplication {
-        application {
-            configureRouting()
-        }
+
         client.get("/").apply {
             assertEquals(
                 expected = HttpStatusCode.OK,
@@ -48,9 +36,6 @@ class ApplicationTest {
             developmentMode = false
         }
 
-        application {
-            configureRouting()
-        }
         client.get("/characters").apply {
             assertEquals(
                 expected = HttpStatusCode.OK,
@@ -93,9 +78,6 @@ class ApplicationTest {
             developmentMode = false
         }
 
-        application {
-            configureRouting()
-        }
         client.get("/characters?page=2").apply {
             assertEquals(
                 expected = HttpStatusCode.OK,
@@ -203,9 +185,6 @@ class ApplicationTest {
     @Test
     fun `access all characters endpoint with non existing page number, assert error`() = testApplication {
 
-        application {
-            configureRouting()
-        }
         client.get("/characters?page=6").apply {
             assertEquals(
                 expected = HttpStatusCode.NotFound,
@@ -235,9 +214,6 @@ class ApplicationTest {
     @Test
     fun `access all characters endpoint with invalid page number, assert error`() = testApplication {
 
-        application {
-            configureRouting()
-        }
         client.get("/characters?page=invalid").apply {
             assertEquals(
                 expected = HttpStatusCode.BadRequest,
@@ -264,5 +240,70 @@ class ApplicationTest {
         }
     }
 
+    @Test
+    fun `access search characters endpoint query hero name, assert single character result`() = testApplication {
+        client.get("/character/search?name=Michonne").apply {
+            assertEquals(
+                expected = HttpStatusCode.OK,
+                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
+            )
+
+            val actual = Json.decodeFromString<ApiResponse>(bodyAsText()).characters.size
+
+            assertEquals(expected = 1, actual = actual)
+        }
+    }
+
+    @Test
+    fun `access search characters endpoint query hero name, assert multiple character result`() = testApplication {
+        client.get("/character/search?name=grimes").apply {
+            assertEquals(
+                expected = HttpStatusCode.OK,
+                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
+            )
+
+            val actual = Json.decodeFromString<ApiResponse>(bodyAsText()).characters.size
+
+            assertEquals(expected = 2, actual = actual)
+        }
+    }
+
+    @Test
+    fun `access search characters endpoint query empty text, assert empty list as a result`() = testApplication {
+        client.get("/character/search?name=").apply {
+            assertEquals(
+                expected = HttpStatusCode.OK,
+                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
+            )
+
+            val actual = Json.decodeFromString<ApiResponse>(bodyAsText()).characters
+
+            assertEquals(expected = emptyList(), actual = actual)
+        }
+    }
+    @Test
+    fun `access search characters endpoint query non existing character, assert empty list as a result`() = testApplication {
+        client.get("/character/search?name=seif").apply {
+            assertEquals(
+                expected = HttpStatusCode.OK,
+                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
+            )
+
+            val actual = Json.decodeFromString<ApiResponse>(bodyAsText()).characters
+
+            assertEquals(expected = emptyList(), actual = actual)
+        }
+    }
+
+    @Test
+    fun `access non existing endpoint, assert not found`() = testApplication {
+        client.get("/unknown").apply {
+            assertEquals(
+                expected = HttpStatusCode.NotFound,
+                actual = status // The HttpStatusCode returned by the server. It includes both, the HttpStatusCode.description and the HttpStatusCode.value (code).
+            )
+            assertEquals(expected = "Page Not Found!", actual = bodyAsText())
+        }
+    }
 }
 // we use Json to deserialize the result from our server and to convert this json response back into this apiResponse object
